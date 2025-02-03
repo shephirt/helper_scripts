@@ -17,8 +17,8 @@ This script dynamically updates your Caddyfile by retrieving the current IP addr
 ## Installation
 1. Clone the repository:
     ```bash
-    git clone https://github.com/your-username/docker-caddyfile-ip-updater.git
-    cd docker-caddyfile-ip-updater
+    git clone https://github.com/shephirt/helper_scripts.git
+    cd helper_scripts/update_caddyfile
     ```
 
 2. Ensure the script is executable:
