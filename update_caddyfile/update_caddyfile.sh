@@ -1,23 +1,23 @@
 #!/bin/bash
 
-# Überprüfen, ob ein Netzwerkparameter übergeben wurde
+# Check if Network Name has been provided
 if [ -z "$1" ]; then
-    echo "$(date '+%Y-%m-%d %H:%M:%S') Fehler: Kein Docker-Netzwerk angegeben." | tee -a "/var/log/caddy_ip_changes.log"
-    echo "Verwendung: $0 <Docker-Netzwerk-Name>"
+    echo "$(date '+%Y-%m-%d %H:%M:%S') Error: No Docker Network provided" | tee -a "/var/log/caddy_ip_changes.log"
+    echo "Use: $0 <Docker-Netzwerk-Name>"
     exit 1
 fi
 
-# Netzwerk als Parameter übergeben
+# Provide Network name as parameter
 NETWORK=$1
 
-# Pfad zur Caddyfile
+# Path to Caddyfile
 CADDYFILE="/etc/caddy/Caddyfile"
 LOGFILE="/var/log/caddy_ip_changes.log"
 
 # Backup der Caddyfile erstellen
 cp "$CADDYFILE" "$CADDYFILE.bak"
 if [ $? -ne 0 ]; then
-    echo "$(date '+%Y-%m-%d %H:%M:%S') Fehler beim Erstellen des Backups der Caddyfile." | tee -a "$LOGFILE"
+    echo "$(date '+%Y-%m-%d %H:%M:%S') Error while creating Backup of Caddyfile" | tee -a "$LOGFILE"
     exit 1
 fi
 
