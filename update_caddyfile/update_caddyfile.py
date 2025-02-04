@@ -15,37 +15,39 @@ docker_client = docker.from_env()
 # Get containers running in a specified network
 def get_containers_in_network(network_name):
     network = docker_client.networks.get(network_name)
-    return {container.name: container.attrs['NetworkSettings']['Networks'][network_name]['IPAddress']
-            for container in network.containers}
+    containers = {container.name: container.attrs['NetworkSettings']['Networks'][network_name]['IPAddress']
+                  for container in network.containers}
+    print("Docker containers in network:", containers)
+    return containers
 
 # Extract current IPs from Caddyfile
 def parse_caddyfile():
     caddy_ips = {}
     with open(CADDYFILE, "r") as f:
         content = f.readlines()
-        print("Caddyfile content:", content)
+    
+    print("Caddyfile content:", content)
     
     current_service = None
     for line in content:
         host_match = re.match(r"@([a-zA-Z0-9_-]+) host", line)
         if host_match:
             current_service = host_match.group(1)
+            print(f"Found host: {current_service}")
         
         proxy_match = re.match(r"\s*reverse_proxy\s+([0-9\.]+):([0-9]+)", line)
         if proxy_match and current_service:
             caddy_ips[current_service] = f"{proxy_match.group(1)}:{proxy_match.group(2)}"
-    if host_match:
-        print(f"Found host: {host_match.group(1)}")
-    if proxy_match:
-        print(f"Found reverse_proxy: {proxy_match.group(1)}{proxy_match.group(2)}:{proxy_match.group(3)}")
-
+            print(f"Found reverse_proxy: {proxy_match.group(1)}:{proxy_match.group(2)}")
+    
     return caddy_ips
 
 # Ping Test
 def is_ip_reachable(ip):
     try:
-        subprocess.run(["ping", "-c", "1", "-W", "1", ip], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        return True
+        result = subprocess.run(["ping", "-c", "1", "-W", "1", ip], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        print(f"Ping test for {ip}: {'reachable' if result.returncode == 0 else 'unreachable'}")
+        return result.returncode == 0
     except subprocess.CalledProcessError:
         return False
 
@@ -103,7 +105,6 @@ def main():
     
     caddy_ips = parse_caddyfile()
     docker_ips = get_containers_in_network(args.network)
-    print("Docker containers in network:", docker_ips)
     update_caddyfile(caddy_ips, docker_ips)
     
     # Warnings for containers not defined in Caddyfile
