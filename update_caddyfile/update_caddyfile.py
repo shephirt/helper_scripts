@@ -43,11 +43,11 @@ def parse_caddyfile():
     print("Parsed Caddyfile IPs:", caddy_ips)
     return caddy_ips
 
-# Ping Test
-def is_ip_reachable(ip):
+# Port Check
+def is_ip_port_reachable(ip, port):
     try:
-        result = subprocess.run(["ping", "-c", "1", "-W", "1", ip], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        print(f"Ping test for {ip}: {'reachable' if result.returncode == 0 else 'unreachable'}")
+        result = subprocess.run(["/bin/bash", "-c", f"echo > /dev/tcp/{ip}/{port}"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        print(f"Port check for {ip}:{port}: {'reachable' if result.returncode == 0 else 'unreachable'}")
         return result.returncode == 0
     except subprocess.CalledProcessError:
         return False
@@ -66,8 +66,9 @@ def update_caddyfile(caddy_ips, docker_ips):
             current_service = host_match.group(1)
         
         if current_service and current_service in caddy_ips:
-            ip, port = caddy_ips[current_service].split(":")
-            if not is_ip_reachable(ip):
+            ip_port = caddy_ips[current_service]
+            ip, port = ip_port.split(":")
+            if not is_ip_port_reachable(ip, port):
                 if current_service in docker_ips:
                     new_ip = docker_ips[current_service]
                     proxy_match = re.match(r"(\s*reverse_proxy\s+)([0-9\.]+)(:[0-9]+)", line)
