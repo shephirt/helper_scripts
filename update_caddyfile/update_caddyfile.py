@@ -23,6 +23,7 @@ def parse_caddyfile():
     caddy_ips = {}
     with open(CADDYFILE, "r") as f:
         content = f.readlines()
+        print("Caddyfile content:", content)
     
     current_service = None
     for line in content:
@@ -33,7 +34,11 @@ def parse_caddyfile():
         proxy_match = re.match(r"\s*reverse_proxy\s+([0-9\.]+):([0-9]+)", line)
         if proxy_match and current_service:
             caddy_ips[current_service] = f"{proxy_match.group(1)}:{proxy_match.group(2)}"
-    
+    if host_match:
+        print(f"Found host: {host_match.group(1)}")
+    if proxy_match:
+        print(f"Found reverse_proxy: {proxy_match.group(1)}{proxy_match.group(2)}:{proxy_match.group(3)}")
+
     return caddy_ips
 
 # Ping Test
@@ -98,6 +103,7 @@ def main():
     
     caddy_ips = parse_caddyfile()
     docker_ips = get_containers_in_network(args.network)
+    print("Docker containers in network:", docker_ips)
     update_caddyfile(caddy_ips, docker_ips)
     
     # Warnings for containers not defined in Caddyfile
