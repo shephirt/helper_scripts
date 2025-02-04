@@ -2,6 +2,7 @@ import docker
 import re
 import os
 import argparse
+import subprocess
 from datetime import datetime
 
 # Paths
@@ -35,6 +36,14 @@ def parse_caddyfile():
     
     return caddy_ips
 
+# Ping Test
+def is_ip_reachable(ip):
+    try:
+        subprocess.run(["ping", "-c", "1", "-W", "1", ip], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        return True
+    except subprocess.CalledProcessError:
+        return False
+
 # Update Caddyfile
 def update_caddyfile(caddy_ips, docker_ips):
     updated = False
@@ -48,15 +57,18 @@ def update_caddyfile(caddy_ips, docker_ips):
         if host_match:
             current_service = host_match.group(1)
         
-        if current_service and current_service in docker_ips:
-            proxy_match = re.match(r"(\s*reverse_proxy\s+)([0-9\.]+)(:[0-9]+)", line)
-            if proxy_match:
-                old_ip = proxy_match.group(2)
-                new_ip = docker_ips[current_service]
-                if old_ip != new_ip:
-                    updated = True
-                    line = f"{proxy_match.group(1)}{new_ip}{proxy_match.group(3)}\n"
-                    log_change(current_service, old_ip, new_ip)
+        if current_service and current_service in caddy_ips:
+            ip, port = caddy_ips[current_service].split(":")
+            if not is_ip_reachable(ip):
+                if current_service in docker_ips:
+                    new_ip = docker_ips[current_service]
+                    proxy_match = re.match(r"(\s*reverse_proxy\s+)([0-9\.]+)(:[0-9]+)", line)
+                    if proxy_match:
+                        old_ip = proxy_match.group(2)
+                        if old_ip != new_ip:
+                            updated = True
+                            line = f"{proxy_match.group(1)}{new_ip}{proxy_match.group(3)}\n"
+                            log_change(current_service, old_ip, new_ip)
         
         new_content.append(line)
     
@@ -84,8 +96,8 @@ def main():
     parser.add_argument("network", type=str, help="The name of the Docker network to inspect.")
     args = parser.parse_args()
     
-    docker_ips = get_containers_in_network(args.network)
     caddy_ips = parse_caddyfile()
+    docker_ips = get_containers_in_network(args.network)
     update_caddyfile(caddy_ips, docker_ips)
     
     # Warnings for containers not defined in Caddyfile
