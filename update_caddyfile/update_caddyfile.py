@@ -45,22 +45,13 @@ def parse_caddyfile():
     return caddy_ips
 
 # Check if an IP with a specific port is reachable
-def is_ip_port_reachable(ip, port, retries=1, delay=30):
-    for attempt in range(retries + 1):
-        try:
-            result = subprocess.run(["/bin/bash", "-c", f"echo > /dev/tcp/{ip}/{port}"], 
-                                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            if result.returncode == 0:
-                print(f"{ip}:{port} is reachable.")
-                return True
-            else:
-                print(f"Attempt {attempt + 1}: {ip}:{port} is unreachable.")
-        except subprocess.CalledProcessError:
-            pass
-        
-        if attempt < retries:
-            time.sleep(delay)
-    return False
+def is_ip_port_reachable(ip, port):
+    try:
+        result = subprocess.run(["/bin/bash", "-c", f"timeout 2 bash -c '</dev/tcp/{ip}/{port}'"],
+                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        return result.returncode == 0
+    except subprocess.CalledProcessError:
+        return False
 
 # Update Caddyfile with new IPs
 def update_caddyfile(caddy_ips, docker_ips):
