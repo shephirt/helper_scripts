@@ -3,6 +3,7 @@ import re
 import os
 import argparse
 import subprocess
+import time
 from datetime import datetime
 
 # Paths
@@ -20,7 +21,7 @@ def get_containers_in_network(network_name):
     print("Docker containers in network:", containers)
     return containers
 
-# Extract current IPs from Caddyfile
+# Extract current IPs and Ports from Caddyfile
 def parse_caddyfile():
     caddy_ips = {}
     with open(CADDYFILE, "r") as f:
@@ -37,22 +38,31 @@ def parse_caddyfile():
         
         proxy_match = re.match(r"\s*reverse_proxy\s+([0-9\.]+):([0-9]+)", line)
         if proxy_match and current_service:
-            caddy_ips[current_service] = f"{proxy_match.group(1)}:{proxy_match.group(2)}"
+            caddy_ips[current_service] = (proxy_match.group(1), proxy_match.group(2))
             print(f"Found reverse_proxy for {current_service}: {proxy_match.group(1)}:{proxy_match.group(2)}")
     
     print("Parsed Caddyfile IPs:", caddy_ips)
     return caddy_ips
 
-# Port Check
-def is_ip_port_reachable(ip, port):
-    try:
-        result = subprocess.run(["/bin/bash", "-c", f"echo > /dev/tcp/{ip}/{port}"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        print(f"Port check for {ip}:{port}: {'reachable' if result.returncode == 0 else 'unreachable'}")
-        return result.returncode == 0
-    except subprocess.CalledProcessError:
-        return False
+# Check if an IP with a specific port is reachable
+def is_ip_port_reachable(ip, port, retries=1, delay=30):
+    for attempt in range(retries + 1):
+        try:
+            result = subprocess.run(["/bin/bash", "-c", f"echo > /dev/tcp/{ip}/{port}"], 
+                                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            if result.returncode == 0:
+                print(f"{ip}:{port} is reachable.")
+                return True
+            else:
+                print(f"Attempt {attempt + 1}: {ip}:{port} is unreachable.")
+        except subprocess.CalledProcessError:
+            pass
+        
+        if attempt < retries:
+            time.sleep(delay)
+    return False
 
-# Update Caddyfile
+# Update Caddyfile with new IPs
 def update_caddyfile(caddy_ips, docker_ips):
     updated = False
     with open(CADDYFILE, "r") as f:
@@ -66,14 +76,12 @@ def update_caddyfile(caddy_ips, docker_ips):
             current_service = host_match.group(1)
         
         if current_service and current_service in caddy_ips:
-            ip_port = caddy_ips[current_service]
-            ip, port = ip_port.split(":")
-            if not is_ip_port_reachable(ip, port):
+            old_ip, port = caddy_ips[current_service]
+            if not is_ip_port_reachable(old_ip, port):
                 if current_service in docker_ips:
                     new_ip = docker_ips[current_service]
                     proxy_match = re.match(r"(\s*reverse_proxy\s+)([0-9\.]+)(:[0-9]+)", line)
                     if proxy_match:
-                        old_ip = proxy_match.group(2)
                         if old_ip != new_ip:
                             updated = True
                             line = f"{proxy_match.group(1)}{new_ip}{proxy_match.group(3)}\n"
