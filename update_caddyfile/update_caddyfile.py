@@ -98,7 +98,7 @@ def log_change(service, old_ip, new_ip, debug):
     log_message(f"IP for {service} has changed: {old_ip} -> {new_ip}", debug)
 
 def log_message(message, debug):
-    timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+    timestamp = datetime.now().astimezone().strftime("%Y-%m-%d %H:%M:%S %Z")
     with open(LOGFILE, "a") as log:
         log.write(f"[{timestamp}] {message}\n")
     if debug:
