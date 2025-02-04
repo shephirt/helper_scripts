@@ -38,8 +38,9 @@ def parse_caddyfile():
         proxy_match = re.match(r"\s*reverse_proxy\s+([0-9\.]+):([0-9]+)", line)
         if proxy_match and current_service:
             caddy_ips[current_service] = f"{proxy_match.group(1)}:{proxy_match.group(2)}"
-            print(f"Found reverse_proxy: {proxy_match.group(1)}:{proxy_match.group(2)}")
+            print(f"Found reverse_proxy for {current_service}: {proxy_match.group(1)}:{proxy_match.group(2)}")
     
+    print("Parsed Caddyfile IPs:", caddy_ips)
     return caddy_ips
 
 # Ping Test
@@ -111,6 +112,7 @@ def main():
     for service in docker_ips.keys():
         if service not in caddy_ips:
             log_message(f"Warning: Container '{service}' is running in the '{args.network}' network but is not defined in the Caddyfile.")
+            print(f"Warning: Container '{service}' is running in the '{args.network}' network but is not found in the parsed Caddyfile services: {list(caddy_ips.keys())}")
 
 if __name__ == "__main__":
     main()
