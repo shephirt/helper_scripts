@@ -116,11 +116,11 @@ def main():
     update_caddyfile(caddy_ips, docker_ips, args.debug)
     
     # Warnings for containers not defined in Caddyfile
-#    for service in docker_ips.keys():
-#        if service not in caddy_ips:
-#            log_message(f"Warning: Container '{service}' is running in the '{args.network}' network but is not defined in the Caddyfile.", args.debug)
-#            if args.debug:
-#                print(f"Warning: Container '{service}' is running in the '{args.network}' network but is not found in the parsed Caddyfile services: {list(caddy_ips.keys())}")
+   if args.debug:   
+       for service in docker_ips.keys():
+        if service not in caddy_ips:
+#          log_message(f"Warning: Container '{service}' is running in the '{args.network}' network but is not defined in the Caddyfile.", args.debug)            
+           print(f"Warning: Container '{service}' is running in the '{args.network}' network but is not found in the parsed Caddyfile services: {list(caddy_ips.keys())}")
 
 if __name__ == "__main__":
     main()
