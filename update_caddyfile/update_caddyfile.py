@@ -30,7 +30,7 @@ def parse_caddyfile():
     
     current_service = None
     for line in content:
-        host_match = re.match(r"@([a-zA-Z0-9_-]+) host", line)
+        host_match = re.match(r"\s*@([a-zA-Z0-9_-]+)\s+host\s+([a-zA-Z0-9._-]+)", line)
         if host_match:
             current_service = host_match.group(1)
             print(f"Found host: {current_service}")
@@ -61,7 +61,7 @@ def update_caddyfile(caddy_ips, docker_ips):
     new_content = []
     current_service = None
     for line in content:
-        host_match = re.match(r"@([a-zA-Z0-9_-]+) host", line)
+        host_match = re.match(r"\s*@([a-zA-Z0-9_-]+)\s+host\s+([a-zA-Z0-9._-]+)", line)
         if host_match:
             current_service = host_match.group(1)
         
