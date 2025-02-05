@@ -13,4 +13,4 @@ cd helper-scripts
 ## Scripts
 |Script|Description|
 |---|---|
-|[Docker Caddyfile IP Updater](https://github.com/shephirt/helper_scripts/wiki/2.-Docker-Caddyfile-IP-Updater)|This script dynamically updates the Caddyfile with the current IP addresses of Docker containers connected to a specified Docker network|
+|[Caddyfile Auto-Updater](https://github.com/shephirt/helper_scripts/wiki/2.-Caddyfile-Auto%E2%80%90Updater)|This script dynamically updates the Caddyfile with the current IP addresses of Docker containers connected to a specified Docker network|
