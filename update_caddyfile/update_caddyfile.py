@@ -12,10 +12,13 @@ LOGFILE = "/var/log/caddy_ip_changes.log"
 docker_client = docker.from_env()
 
 # Configure logger
-def configure_logger(debug_mode):
+def configure_logger(debug_mode, simulate_mode):
     logger.remove()
     level = "DEBUG" if debug_mode else "INFO"
-    logger.add(LOGFILE, format="[{time}] [{level}] {message}", level=level, enqueue=True)
+    if simulate_mode:
+        logger.add(lambda msg: print(msg, end=""), format="[{time}] [{level}] {message}", level=level)
+    else:
+        logger.add(LOGFILE, format="[{time}] [{level}] {message}", level=level, enqueue=True)
 
 # Get containers running in a specified network
 def get_containers_in_network(network_name):
@@ -93,7 +96,7 @@ def main():
     parser.add_argument("--simulate", action="store_true", help="Enable simulation mode (no changes will be made).")
     args = parser.parse_args()
     
-    configure_logger(args.debug)
+    configure_logger(args.debug, args.simulate)
     
     caddy_ips = parse_caddyfile()
     docker_ips = get_containers_in_network(args.network)
