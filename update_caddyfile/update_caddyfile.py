@@ -28,9 +28,9 @@ def get_containers_in_network(network_name):
     logger.debug(f"Docker containers in network: {containers}")
     return containers
 
-# Extract current IPs and Ports from Caddyfile
+# Extract current proxy targets from Caddyfile
 def parse_caddyfile():
-    caddy_ips = {}
+    caddy_proxies = {}
     with open(CADDYFILE, "r") as f:
         content = f.readlines()
     
@@ -43,16 +43,18 @@ def parse_caddyfile():
             current_service = host_match.group(1)
             logger.debug(f"Found host: {current_service}")
         
-        proxy_match = re.match(r"\s*reverse_proxy\s+([0-9\.]+):([0-9]+)", line)
+        proxy_match = re.match(r"\s*reverse_proxy\s+([a-zA-Z0-9._-]+):([0-9]+)", line)
         if proxy_match and current_service:
-            caddy_ips[current_service] = (proxy_match.group(1), proxy_match.group(2))
-            logger.debug(f"Found reverse_proxy for {current_service}: {proxy_match.group(1)}:{proxy_match.group(2)}")
+            target = proxy_match.group(1)
+            port = proxy_match.group(2)
+            caddy_proxies[current_service] = (target, port)
+            logger.debug(f"Found reverse_proxy for {current_service}: {target}:{port}")
     
-    logger.debug(f"Parsed Caddyfile IPs: {caddy_ips}")
-    return caddy_ips
+    logger.debug(f"Parsed Caddyfile proxies: {caddy_proxies}")
+    return caddy_proxies
 
 # Update Caddyfile with new IPs
-def update_caddyfile(caddy_ips, docker_ips, simulation):
+def update_caddyfile(caddy_proxies, docker_ips, simulation):
     updated = False
     with open(CADDYFILE, "r") as f:
         content = f.readlines()
@@ -64,15 +66,15 @@ def update_caddyfile(caddy_ips, docker_ips, simulation):
         if host_match:
             current_service = host_match.group(1)
         
-        if current_service and current_service in caddy_ips:
-            old_ip, port = caddy_ips[current_service]
-            if current_service in docker_ips:
+        if current_service and current_service in caddy_proxies:
+            old_target, port = caddy_proxies[current_service]
+            if old_target == "localhost" and current_service in docker_ips:
                 new_ip = docker_ips[current_service]
-                proxy_match = re.match(r"(\s*reverse_proxy\s+)([0-9\.]+)(:[0-9]+)", line)
+                proxy_match = re.match(r"(\s*reverse_proxy\s+)([a-zA-Z0-9._-]+)(:[0-9]+)", line)
                 if proxy_match:
-                    if old_ip != new_ip:
+                    if old_target != new_ip:
                         updated = True
-                        logger.info(f"IP for {current_service} has changed: {old_ip} -> {new_ip}")
+                        logger.info(f"Updating {current_service}: localhost -> {new_ip}")
                         if not simulation:
                             line = f"{proxy_match.group(1)}{new_ip}{proxy_match.group(3)}\n"
         
@@ -98,13 +100,13 @@ def main():
     
     configure_logger(args.debug, args.simulate)
     
-    caddy_ips = parse_caddyfile()
+    caddy_proxies = parse_caddyfile()
     docker_ips = get_containers_in_network(args.network)
-    update_caddyfile(caddy_ips, docker_ips, args.simulate)
+    update_caddyfile(caddy_proxies, docker_ips, args.simulate)
     
     # Warnings for containers not defined in Caddyfile
     for service in docker_ips.keys():
-        if service not in caddy_ips:
+        if service not in caddy_proxies:
             logger.debug(f"Warning: Container '{service}' is running in the '{args.network}' network but is not defined in the Caddyfile.")
 
 if __name__ == "__main__":
