@@ -1,0 +1,17 @@
+{
+	"folders": [
+		{
+			"name": "helper_scripts",
+			"path": ".."
+		},
+		{
+			"name": "helper_scripts.wiki",
+			"path": "../../helper_scripts.wiki"
+		},
+		{
+			"name": "test",
+			"path": "../../test"
+		}
+	],
+	"settings": {}
+}
