@@ -1,7 +1,22 @@
 #!/usr/bin/env bash
-set -e
 
-echo "=== [1/7] System aktualisieren & benötigte Pakete installieren ==="
+set -euo pipefail
+trap 'echo "[ERROR] Fehler in Zeile $LINENO beim Befehl: $BASH_COMMAND"' ERR
+
+PS4='+ $(date "+%H:%M:%S") ${BASH_SOURCE}:${LINENO}: '
+DEBUG="${DEBUG:-false}"
+[ "$DEBUG" = "true" ] && set -x
+
+SSH_PORT="$1"
+if [ -z "$SSH_PORT" ]; then
+  echo "Fehler: Kein SSH-Port übergeben."
+  exit 1
+fi
+
+
+##############################################
+# 1) System aktualisieren & benötigte Pakete
+##############################################
 
 apt update -y
 apt upgrade -y
@@ -16,52 +31,58 @@ apt install -y \
   zsh \
   btop \
   eza \
-  ufw
+  ufw \
+  fail2ban
 
 
-echo "=== [2/7] SSH-Port auf 4722 setzen ==="
+##############################################
+# 2) SSH-Port setzen
+##############################################
 
 SSHD_CONFIG="/etc/ssh/sshd_config"
 
-if ! grep -q "^Port 4722" "$SSHD_CONFIG"; then
+# Port nur anpassen, wenn er nicht bereits gesetzt ist
+if ! grep -q "^Port ${SSH_PORT}" "$SSHD_CONFIG"; then
     cp "$SSHD_CONFIG" "${SSHD_CONFIG}.bak"
-    sed -i 's/^#Port 22/Port 4722/' "$SSHD_CONFIG"
-    sed -i 's/^Port 22/Port 4722/' "$SSHD_CONFIG"
-    echo "SSH Port auf 4722 geändert."
-else
-    echo "SSH Port war bereits auf 4722 gesetzt."
+    sed -i "s/^#Port .*/Port ${SSH_PORT}/" "$SSHD_CONFIG"
+    sed -i "s/^Port .*/Port ${SSH_PORT}/" "$SSHD_CONFIG"
 fi
 
 systemctl restart ssh
 
 
-echo "=== [3/7] Micro Editor installieren ==="
+##############################################
+# 3) Micro Editor installieren
+##############################################
 
 cd /usr/bin
 curl https://getmic.ro/r | sudo sh
 
 
-echo "=== [4/7] ZSH & Oh My Zsh installieren (unattended) ==="
+##############################################
+# 4) ZSH + Oh-My-ZSH installieren
+##############################################
 
 export RUNZSH=no
 export CHSH=no
 
-# Oh My Zsh installieren
+# Oh My Zsh unattended installieren
 sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
 
-# ZSH als Standardshell setzen (unattended)
+# ZSH als Standardshell aktivieren (unattended)
 chsh -s /usr/bin/zsh "$USER"
 
 
-echo "=== [5/7] Docker installieren (offizielles Docker-Repo) ==="
+##############################################
+# 5) Docker installieren (offizielles Repo)
+##############################################
 
 install -m 0755 -d /etc/apt/keyrings
 curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.gpg
 chmod a+r /etc/apt/keyrings/docker.gpg
 
-echo \
-  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian \
-  $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian $(lsb_release -cs) stable" \
+  | tee /etc/apt/sources.list.d/docker.list >/dev/null
 
 apt update -y
 
@@ -71,13 +92,12 @@ systemctl enable docker
 systemctl start docker
 
 
-echo "=== [6/7] Docker Daemon konfigurieren ==="
+##############################################
+# 6) Docker: Host Binding auf 127.0.0.1
+##############################################
 
 DAEMON_FILE="/etc/docker/daemon.json"
-
-if [ -f "$DAEMON_FILE" ]; then
-    cp "$DAEMON_FILE" "${DAEMON_FILE}.bak"
-fi
+if [ -f "$DAEMON_FILE" ]; then cp "$DAEMON_FILE" "${DAEMON_FILE}.bak"; fi
 
 cat > "$DAEMON_FILE" <<EOF
 {
@@ -92,23 +112,41 @@ EOF
 systemctl restart docker
 
 
-echo "=== [7/7] UFW konfigurieren ==="
+##############################################
+# 7) UFW Firewall konfigurieren
+##############################################
 
 ufw --force reset
 ufw default deny incoming
 ufw default allow outgoing
 
-# Ports freigeben
 ufw allow 80/tcp
 ufw allow 443/tcp
-ufw allow 4722/tcp
+ufw allow ${SSH_PORT}/tcp
 
 ufw --force enable
 
 
-echo "=============================================="
-echo "✔ Setup abgeschlossen!"
-echo "✔ SSH Port: 4722"
-echo "✔ Docker läuft und bindet nur auf 127.0.0.1"
-echo "✔ ZSH ist deine Standardshell"
-echo "=============================================="
+##############################################
+# 8) Fail2Ban aktivieren + SSH schützen
+##############################################
+
+mkdir -p /etc/fail2ban
+
+cat > /etc/fail2ban/jail.local <<EOF
+[DEFAULT]
+bantime = 10m
+findtime = 10m
+maxretry = 5
+backend = systemd
+
+[sshd]
+enabled = true
+port = ${SSH_PORT}
+
+[ufw]
+enabled = true
+EOF
+
+systemctl enable fail2ban
+systemctl restart fail2ban
