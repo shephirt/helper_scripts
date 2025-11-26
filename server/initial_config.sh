@@ -9,7 +9,8 @@
 # 
 # SSH port (default: 22) and DEBUG mode (default: false) can be activated via parameter
 # Run script via: 
-# SSH_PORT=1111 DEBUG=true curl -fsSL https://raw.githubusercontent.com/shephirt/helper_scripts/refs/heads/main/server/initial_config.sh | bash
+# curl -fsSL https://raw.githubusercontent.com/shephirt/helper_scripts/refs/heads/main/server/initial_config.sh | bash -s -- {PORT} {DEBUG(true/false)}
+# e.g. curl -fsSL https://raw.githubusercontent.com/shephirt/helper_scripts/refs/heads/main/server/initial_config.sh | bash -s -- 2222 true
 ##############################################
 
 set -euo pipefail
