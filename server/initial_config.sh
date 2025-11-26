@@ -27,7 +27,6 @@ apt install -y \
   ca-certificates \
   gnupg \
   lsb-release \
-  software-properties-common \
   zsh \
   btop \
   eza \
