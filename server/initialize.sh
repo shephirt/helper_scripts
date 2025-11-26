@@ -8,9 +8,11 @@
 # curl -fsSL https://raw.githubusercontent.com/shephirt/helper_scripts/refs/heads/main/server/initialize.sh | bash -s -- -p 2222 -d true
 ##############################################
 
+# ---- Safe PS4 (kein unbound) ----
+PS4='+ $(date "+%H:%M:%S") script:${LINENO}: '
+
 set -euo pipefail
 trap 'echo "[ERROR] Failure in line $LINENO during command: $BASH_COMMAND"' ERR
-PS4='+ $(date "+%H:%M:%S") ${0##*/}:${LINENO}: '
 
 ##############################################
 # Helper: log an informational line with a timestamp
@@ -56,20 +58,20 @@ while getopts ":p:d:h" opt; do
 done
 
 # Validate SSH port
-if ! [[ "$SSH_PORT" =~ ^[0-9]+$ ]]; then
+if ! [[ "${SSH_PORT}" =~ ^[0-9]+$ ]]; then
   echo "[ERROR] SSH port must be numeric."
   exit 1
 fi
 
 # Enable debugging if requested
-[ "$DEBUG" = "true" ] && set -x
+[ "${DEBUG}" = "true" ] && set -x
 
-log_info "Starting setup (SSH_PORT=$SSH_PORT, DEBUG=$DEBUG)"
+log_info "Starting setup (SSH_PORT=${SSH_PORT}, DEBUG=${DEBUG})"
 
 ##############################################
 # Ensure script is running in Bash
 ##############################################
-if [ -z "$BASH_VERSION" ]; then
+if [ -z "${BASH_VERSION:-}" ]; then
     echo "[ERROR] This script must be run with Bash, not sh."
     exit 1
 fi
@@ -81,11 +83,9 @@ log_info "Step 1/8: Updating system and installing required packages"
 apt update -y
 log_info "Package lists updated."
 
-log_info "Step 1/8: Upgrading installed packages"
 apt upgrade -y
 log_info "Packages upgraded."
 
-log_info "Step 1/8: Installing essential packages"
 apt install -y \
   curl \
   git \
@@ -119,7 +119,6 @@ log_info "SSH port configured and SSH service restarted."
 ##############################################
 log_info "Step 3/8: Installing Micro editor"
 
-cd /usr/bin
 curl -fsSL https://getmic.ro/r
 chmod +x micro-installer.sh
 sh micro-installer.sh
@@ -136,7 +135,7 @@ export CHSH=no
 
 sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
 
-chsh -s /usr/bin/zsh "$USER"
+chsh -s /usr/bin/zsh "${USER:-root}"
 log_info "ZSH and Oh-My-ZSH installed."
 
 ##############################################
