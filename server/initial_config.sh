@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# =========================================
+##############################################
 # Unattended Debian Server Setup Script
 # SSH port and DEBUG mode configurable
 # 
@@ -10,23 +10,23 @@
 # SSH port (default: 22) and DEBUG mode (default: false) can be activated via parameter
 # Run script via: 
 # SSH_PORT=1111 DEBUG=true curl -fsSL https://raw.githubusercontent.com/shephirt/helper_scripts/refs/heads/main/server/initial_config.sh | bash
-# =========================================
+##############################################
 
 set -euo pipefail
 trap 'echo "[ERROR] Failure in line $LINENO during command: $BASH_COMMAND"' ERR
 PS4='+ $(date "+%H:%M:%S") ${BASH_SOURCE}:${LINENO}: '
 
-# =======================
+##############################################
 # CONFIGURATION (Defaults)
-# =======================
+##############################################
 SSH_PORT="22"
 DEBUG="false"
 
-# =======================
+##############################################
 # OPTIONAL CLI OVERRIDES
 # 1: SSH_PORT
 # 2: DEBUG
-# =======================
+##############################################
 SSH_PORT="${1:-$SSH_PORT}"
 DEBUG="${2:-$DEBUG}"
 
@@ -35,9 +35,9 @@ DEBUG="${2:-$DEBUG}"
 
 echo "[INFO] Starting setup (SSH_PORT=$SSH_PORT, DEBUG=$DEBUG)"
 
-# =======================
+##############################################
 # Ensure script is running in Bash
-# =======================
+##############################################
 if [ -z "$BASH_VERSION" ]; then
     echo "[ERROR] This script must be run with Bash, not sh."
     exit 1
@@ -58,7 +58,8 @@ apt install -y \
   btop \
   eza \
   ufw \
-  fail2ban
+  fail2ban \
+  stow
 
 ##############################################
 # 2) Configure SSH port
@@ -128,4 +129,46 @@ ufw --force enable
 ##############################################
 # 8) Enable Fail2Ban + SSH protection
 ##############################################
-mkdir -p /etc/fail2
+mkdir -p /etc/fail2ban
+cat > /etc/fail2ban/jail.local <<EOF
+[DEFAULT]
+ignoreip = 127.0.0.1/8 ::1 10.0.0.0/8 192.168.0.0/16
+bantime           = 1h
+bantime.increment = true
+bantime.factor    = 2
+bantime.maxtime   = 2w
+bantime.rndtime   = 10m
+findtime = 1h
+maxretry = 5
+backend = systemd
+banaction = ufw
+action = %(action_mwl)s
+loglevel = INFO
+dbfile = /var/lib/fail2ban/fail2ban.sqlite3
+dbpurgeage = 30d
+
+[sshd]
+enabled = true
+port = ${SSH_PORT}
+filter = sshd
+logpath = /var/log/auth.log
+maxretry = 3
+bantime = 4h
+ignoreip = 127.0.0.1/8 ::1
+
+[ufw]
+enabled = true
+filter = ufw
+logpath = /var/log/ufw.log
+
+[recidive]
+enabled = true
+logpath = /var/log/fail2ban.log
+bantime = 4w
+findtime = 2w
+maxretry = 5
+EOF
+systemctl enable fail2ban
+systemctl restart fail2ban
+
+echo "[INFO] Server setup completed successfully!"
