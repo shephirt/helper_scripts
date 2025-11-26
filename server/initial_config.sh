@@ -17,6 +17,13 @@ trap 'echo "[ERROR] Failure in line $LINENO during command: $BASH_COMMAND"' ERR
 PS4='+ $(date "+%H:%M:%S") ${BASH_SOURCE}:${LINENO}: '
 
 ##############################################
+# Helper: log an informational line with a timestamp
+##############################################
+log_info() {
+  echo "[INFO] $(date "+%Y-%m-%d %H:%M:%S") - $*"
+}
+
+##############################################
 # CONFIGURATION (Defaults)
 ##############################################
 SSH_PORT="22"
@@ -33,7 +40,7 @@ DEBUG="${2:-$DEBUG}"
 # Enable debugging if requested
 [ "$DEBUG" = "true" ] && set -x
 
-echo "[INFO] Starting setup (SSH_PORT=$SSH_PORT, DEBUG=$DEBUG)"
+log_info "Starting setup (SSH_PORT=$SSH_PORT, DEBUG=$DEBUG)"
 
 ##############################################
 # Ensure script is running in Bash
@@ -46,8 +53,15 @@ fi
 ##############################################
 # 1) Update system & install required packages
 ##############################################
+log_info "Step 1/8: Updating system and installing required packages"
 apt update -y
+log_info "Package lists updated."
+
+log_info "Step 1/8: Upgrading installed packages"
 apt upgrade -y
+log_info "Packages upgraded."
+
+log_info "Step 1/8: Installing essential packages: curl, git, ca-certificates, gnupg, lsb-release, zsh, btop, eza, ufw, fail2ban, stow"
 apt install -y \
   curl \
   git \
@@ -60,10 +74,12 @@ apt install -y \
   ufw \
   fail2ban \
   stow
+log_info "Essential packages installed."
 
 ##############################################
 # 2) Configure SSH port
 ##############################################
+log_info "Step 2/8: Configuring SSH to listen on port ${SSH_PORT}"
 SSHD_CONFIG="/etc/ssh/sshd_config"
 if ! grep -q "^Port ${SSH_PORT}" "$SSHD_CONFIG"; then
     cp "$SSHD_CONFIG" "${SSHD_CONFIG}.bak"
@@ -71,24 +87,30 @@ if ! grep -q "^Port ${SSH_PORT}" "$SSHD_CONFIG"; then
     sed -i "s/^Port .*/Port ${SSH_PORT}/" "$SSHD_CONFIG"
 fi
 systemctl restart ssh
+log_info "SSH port configured and SSH service restarted."
 
 ##############################################
 # 3) Install Micro editor
 ##############################################
+log_info "Step 3/8: Installing Micro editor"
 cd /usr/bin
 curl https://getmic.ro/r | sh
+log_info "Micro editor installed."
 
 ##############################################
 # 4) Install ZSH + Oh-My-ZSH unattended
 ##############################################
+log_info "Step 4/8: Installing ZSH and Oh-My-ZSH (unattended)"
 export RUNZSH=no
 export CHSH=no
 sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
 chsh -s /usr/bin/zsh "$USER"
+log_info "ZSH and Oh-My-ZSH installed and configured (unattended)."
 
 ##############################################
 # 5) Install Docker (official repo)
 ##############################################
+log_info "Step 5/8: Installing Docker from official repository"
 install -m 0755 -d /etc/apt/keyrings
 curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.gpg
 chmod a+r /etc/apt/keyrings/docker.gpg
@@ -98,10 +120,12 @@ apt update -y
 apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 systemctl enable docker
 systemctl start docker
+log_info "Docker installed, enabled, and started."
 
 ##############################################
 # 6) Configure Docker daemon binding to 127.0.0.1
 ##############################################
+log_info "Step 6/8: Configuring Docker daemon to bind to 127.0.0.1"
 DAEMON_FILE="/etc/docker/daemon.json"
 [ -f "$DAEMON_FILE" ] && cp "$DAEMON_FILE" "${DAEMON_FILE}.bak"
 cat > "$DAEMON_FILE" <<EOF
@@ -114,10 +138,12 @@ cat > "$DAEMON_FILE" <<EOF
 }
 EOF
 systemctl restart docker
+log_info "Docker daemon configured and restarted."
 
 ##############################################
 # 7) Configure UFW firewall
 ##############################################
+log_info "Step 7/8: Configuring UFW firewall and open ports 80, 443 and SSH on ${SSH_PORT}"
 ufw --force reset
 ufw default deny incoming
 ufw default allow outgoing
@@ -125,10 +151,12 @@ ufw allow 80/tcp
 ufw allow 443/tcp
 ufw allow "${SSH_PORT}/tcp"
 ufw --force enable
+log_info "UFW firewall configured and enabled."
 
 ##############################################
 # 8) Enable Fail2Ban + SSH protection
 ##############################################
+log_info "Step 8/8: Enabling Fail2Ban and SSH protection"
 mkdir -p /etc/fail2ban
 cat > /etc/fail2ban/jail.local <<EOF
 [DEFAULT]
@@ -170,5 +198,6 @@ maxretry = 5
 EOF
 systemctl enable fail2ban
 systemctl restart fail2ban
+log_info "Fail2Ban installed and configured."
 
-echo "[INFO] Server setup completed successfully!"
+log_info "Server setup completed successfully!"
