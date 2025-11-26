@@ -35,6 +35,14 @@ DEBUG="${2:-$DEBUG}"
 
 echo "[INFO] Starting setup (SSH_PORT=$SSH_PORT, DEBUG=$DEBUG)"
 
+# =======================
+# Ensure script is running in Bash
+# =======================
+if [ -z "$BASH_VERSION" ]; then
+    echo "[ERROR] This script must be run with Bash, not sh."
+    exit 1
+fi
+
 ##############################################
 # 1) Update system & install required packages
 ##############################################
