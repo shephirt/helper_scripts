@@ -74,7 +74,8 @@ apt install -y \
   eza \
   ufw \
   fail2ban \
-  stow
+  stow \
+  ncdu
 log_info "Essential packages installed."
 
 ##############################################
