@@ -10,7 +10,7 @@
 
 set -euo pipefail
 trap 'echo "[ERROR] Failure in line $LINENO during command: $BASH_COMMAND"' ERR
-PS4='+ $(date "+%H:%M:%S") ${BASH_SOURCE}:${LINENO}: '
+PS4='+ $(date "+%H:%M:%S") ${0##*/}:${LINENO}: '
 
 ##############################################
 # Helper: log an informational line with a timestamp
