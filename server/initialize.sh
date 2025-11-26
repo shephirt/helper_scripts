@@ -119,10 +119,25 @@ log_info "SSH port configured and SSH service restarted."
 ##############################################
 log_info "Step 3/8: Installing Micro editor"
 
-curl -fsSL https://getmic.ro/r
-chmod +x micro-installer.sh
-sh micro-installer.sh
-rm micro-installer.sh
+MICRO_TMP="/tmp/micro-installer.sh"
+MICRO_URL="https://getmic.ro/r"
+
+# Download installer
+curl -fsSL "$MICRO_URL" -o "$MICRO_TMP"
+
+# Make executable and run
+chmod +x "$MICRO_TMP"
+sh "$MICRO_TMP"
+
+# Ensure micro binary is in PATH, move to /usr/local/bin if needed
+if ! command -v micro >/dev/null 2>&1; then
+    if [ -f "$HOME/.local/bin/micro" ]; then
+        install -m 0755 "$HOME/.local/bin/micro" /usr/bin/micro
+    fi
+fi
+
+# Cleanup
+rm -f "$MICRO_TMP"
 
 log_info "Micro editor installed."
 
