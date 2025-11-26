@@ -75,7 +75,8 @@ apt install -y \
   ufw \
   fail2ban \
   stow \
-  ncdu
+  ncdu \
+  nala
 log_info "Essential packages installed."
 
 ##############################################
