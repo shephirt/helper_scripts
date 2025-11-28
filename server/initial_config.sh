@@ -76,7 +76,8 @@ apt install -y \
   fail2ban \
   stow \
   ncdu \
-  nala
+  nala \
+  zoxide
 log_info "Essential packages installed."
 
 ##############################################
