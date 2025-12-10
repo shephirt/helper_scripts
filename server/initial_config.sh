@@ -134,6 +134,7 @@ DAEMON_FILE="/etc/docker/daemon.json"
 [ -f "$DAEMON_FILE" ] && cp "$DAEMON_FILE" "${DAEMON_FILE}.bak"
 cat > "$DAEMON_FILE" <<EOF
 {
+  "127.0.0.1",
   "default-network-opts": {
     "bridge": {
       "com.docker.network.bridge.host_binding_ipv4": "127.0.0.1"
