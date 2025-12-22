@@ -10,8 +10,8 @@
    Current defaults in the script:
    ```bash
    BACKUP_LOCATION="/root/mailcow-backup"
-   REMOTE_USER="u298426-sub1"
-   REMOTE_HOST="u298426-sub1.your-storagebox.de"
+   REMOTE_USER="your-remote-user"
+   REMOTE_HOST="remote.host.example.com"
    REMOTE_PORT="23"
    REMOTE_PATH="mailcow-backups"
    SSH_KEY="$HOME/.ssh/mailcow-backup"
@@ -21,10 +21,10 @@
 2. **Ensure your SSH key is set up:**
    ```bash
    # Test SSH connection (adjust user/host/port/key as needed)
-   ssh -p 23 -i ~/.ssh/mailcow-backup u298426-sub1@u298426-sub1.your-storagebox.de
+   ssh -p 23 -i ~/.ssh/mailcow-backup your-remote-user@remote.host.example.com
    ```
 
-**Note about Hetzner Storage Boxes:** use a relative `REMOTE_PATH` (no leading `/`).
+**Note about Storage Boxes:** use a relative `REMOTE_PATH` (no leading `/`).
 
 ## Usage
 
@@ -59,7 +59,7 @@ crontab -e
 0 2 * * * /root/mailcow-backup.sh >> /var/log/mailcow-backup.log 2>&1
 
 # Or with parameters:
-0 2 * * * /root/mailcow-backup.sh -h u298426-sub1.your-storagebox.de -d mailcow-backups >> /var/log/mailcow-backup.log 2>&1
+0 2 * * * /root/mailcow-backup.sh -h remote.host.example.com -d mailcow-backups >> /var/log/mailcow-backup.log 2>&1
 ```
 
 ## What the script does
